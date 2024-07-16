@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Cleanup Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        
+        stage('Initialize') {
+            steps {
+                // Initialize environment, if needed
+                sh 'echo "Initializing environment..."'
+                sh 'echo "pm2 list"'
+            }
+        }
+        
+        stage('Pulling Code') {
+            steps {
+                // Install npm dependencies
+                git branch: 'dev1.0', credentialsId: 'credentials', url: 'url'
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                // Install npm dependencies
+                sh 'npm install'
+                sh 'npm install -g pm2'
+                sh 'npm install typescript --save-dev'
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                // Compile TypeScript files
+                sh 'npx tsc'
+                sh 'pwd'
+            }
+        }
+        
+        stage('Existing Pm2 Process') {
+            steps {
+                // Stop PM2 process if it exists
+                script {
+                    try {
+                        sh 'pm2 delete adminbackend'
+                        echo "PM2 process stopped successfully"
+                    } catch (Exception e) {
+                        echo "PM2 process not found or could not be stopped"
+                    }
+                }
+            }
+        }
+        
+        stage('Starting PM2 Process') {
+            steps {
+                // Start PM2 process
+                sh 'pm2 start npm --name "adminbackend" -- start'
+            }
+        }
+        
+        stage('Cleanup') {
+            steps {
+                // Save PM2 process list
+                sh 'pm2 save'
+                // Set BUILD_ID environment variable
+                sh 'export BUILD_ID=dontKillMe'
+                // Save PM2 process list again (optional)
+                sh 'npx pm2 save'
+            }
+        }
+    }
+}
